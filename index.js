@@ -10,7 +10,9 @@ let prop = {
   particleRad: 5,
   particleCount: 100,
   particleMaxVel: 0.5,
-  lineLength: 150
+  lineLength: 150,
+  smooth: 0.99,
+  force: -0.1
 }
 
 window.onresize = () => {
@@ -29,11 +31,15 @@ class Particle {
   position() {
     this.x + this.velX > w && this.velX > 0 || this.x + this.velX < 0 && this.velX < 0 ? this.velX *= -1 : this.velX
     this.y + this.velY > h && this.velY > 0 || this.y + this.velY < 0 && this.velY < 0 ? this.velY *= -1 : this.velY
+    if (this.velX > 0.5 || this.velX < -0.5 || this.velY > 0.5 || this.velY < -0.5) {
+      this.velX *= prop.smooth
+      this.velY *= prop.smooth
+    }
     this.x += this.velX
     this.y += this.velY
   }
 
-  reDraw() {
+  draw() {
     ctx.beginPath();
     ctx.arc(this.x, this.y, prop.particleRad, 0, Math.PI*2)
     ctx.closePath();
@@ -44,10 +50,10 @@ class Particle {
 
 //    METHODS
 
-function reDrawParticles() {
+function drawParticles() {
   for (let i in particles) {
     particles[i].position()
-    particles[i].reDraw()
+    particles[i].draw()
   }
 }
 
@@ -93,11 +99,26 @@ function mousePos({layerX, layerY}) {
   [mouse.x, mouse.y] = [layerX, layerY]
 }
 
+function click({layerX, layerY}) {
+  for (let i in particles) {
+    let acc = {x: 0, y: 0}
+    length = Math.sqrt(Math.pow(layerX - particles[i].x, 2) + Math.pow(layerY - particles[i].y, 2))
+    if (length < prop.lineLength) {
+      let delta = {x: layerX - particles[i].x, y: layerY - particles[i].y}
+      acc.x += delta.x
+      acc.y += delta.y
+      particles[i].velX = particles[i].velX + acc.x * prop.force
+      particles[i].velY = particles[i].velY + acc.y * prop.force
+    }
+  }
+}
+
 cnv.addEventListener('mousemove', mousePos)
+cnv.addEventListener('mousedown', click)
 
 function loop() {
   ctx.clearRect(0, 0, w, h);
-  reDrawParticles()
+  drawParticles()
   getLines()
   getMouseLines()
   requestAnimationFrame(loop)
